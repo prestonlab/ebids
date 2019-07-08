@@ -49,7 +49,7 @@ data.loc[data.trial_type == 'reward',:] # get just the reward events
 
 Matlab support seems to be less well-developed, but also works:
 
-```matlab
-layout = bids.layout(bids_dir); # load dataset information
-data = struct2table(layout.subjects(1).func(1).meta); # load run events
+```octave
+layout = bids.layout(bids_dir); % load dataset information
+data = struct2table(layout.subjects(1).func(1).meta); % load run events
 ```
