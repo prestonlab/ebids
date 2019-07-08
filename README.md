@@ -23,7 +23,7 @@ If using python for analysis, you'll also want pybids: `pip install pybids`.
 
 ## Converting behavioral data
 
-For xmaze data:
+For xmaze data, in the Terminal run:
 ```bash
 xmaze-convert raw_dir bids_dir sub ses
 ```
@@ -40,5 +40,5 @@ In python, you should then be able to validate the BIDS formatting and load info
 from bids import BIDSLayout
 layout = BIDSLayout(bids_dir) # validate dataset and load information
 data = layout.get(task='xmaze', subject='DS1902', session='01', run=1).get_df() # load run events
-data.loc[data.trial_type == 'reward',:] # display just the reward events
+data.loc[data.trial_type == 'reward',:] # get just the reward events
 ```
