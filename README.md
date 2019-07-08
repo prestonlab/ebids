@@ -1,5 +1,5 @@
 # ebids
-Python code to translate electrophysiological data to BIDS format.
+Code to translate electrophysiological data to BIDS format.
 
 ## Installation
 
