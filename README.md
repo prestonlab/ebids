@@ -39,5 +39,6 @@ In python, you should then be able to validate the BIDS formatting and load info
 ```python
 from bids import BIDSLayout
 layout = BIDSLayout(bids_dir) # validate dataset and load information
-df = layout.get(task='xmaze', subject='DS1902', session='01', run=1).get_df() # load run events
+data = layout.get(task='xmaze', subject='DS1902', session='01', run=1).get_df() # load run events
+data.loc[data.trial_type == 'reward',:] # display just the reward events
 ```
