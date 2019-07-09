@@ -97,19 +97,17 @@ def convert_sync(sync_file, out_file):
     # read all sync start events
     tree = ET.parse(sync_file) 
     events = tree.findall('Event')
-    sync = np.zeros(len(events))
+    send_times = np.zeros(len(events))
     for i, event in enumerate(events):
-        sync[i] = event.text
+        send_times[i] = event.text
 
-    # write out events to a text file
-    data = pd.DataFrame({'sync':sync})
-    data.to_csv(out_file, sep='\t', index=False, header=False)
-
-    # write a sidecar file to identify the column
-    base = os.path.basename(out_file).split('.')[0]
-    sidecar = os.path.join(os.path.dirname(out_file), base + '.json')
-    #with open(sidecar, 'w') as f:
-    #    json.dump({'Columns':['onset']}, f)
+    # only the changes are logged, so must add signal back in. Start
+    # with black, so first change is to white
+    send_signals = np.zeros(len(events), dtype=int)
+    send_signals[::2] = 1
+    
+    data = pd.DataFrame({'onset':send_times, 'signal':send_signals})
+    data.to_csv(out_file, sep='\t', index=False)
 
 def convert_session(raw_dir, bids_dir, sub, ses):
     """Convert raw data for a session to bids format."""
@@ -151,5 +149,5 @@ def convert_session(raw_dir, bids_dir, sub, ses):
             warnings.warn('No sync file found for run {}.'.format(i),
                           RuntimeWarning)
             continue
-        sync_file = os.path.join(ses_dir, run_name + '_sync.tsv')
+        sync_file = os.path.join(ses_dir, run_name + '_send.tsv')
         convert_sync(raw_file, sync_file)
