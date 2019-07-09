@@ -3,36 +3,59 @@
 import os
 import glob
 import numpy as np
+import pandas as pd
 import neo
 import scipy.interpolate as interp
 import scipy.linalg as linalg
+from bids import BIDSLayout
 
-def convert_nlx_ttl(nlx_dir, bids_dir, sub, ses, task):
-    """Convert NLX TTLs to standard format."""
+def prep_nlx_ttl(nlx_dir, bids_dir, sub, ses, task):
+    """Prepare NLX TTLs for task alignment."""
 
-    event_files = glob(os.path.join(nlx_dir, '*.nev'))
-    
-    
+    # read all TTL signals from the NLX directory
+    recv_times, recv_signals = read_nlx_ttl(nlx_dir)
+    data = pd.DataFrame({'onset':recv_times, 'signal':recv_signals})
+
+    # write to a file for each run in the task (will be same for each)
+    layout = BIDSLayout(bids_dir)
+    runs = layout.get(subject=sub, session=ses, task=task)
+    for events_file in runs:
+        recv_file = events_file.path.replace('_events.tsv', '_recv.tsv')
+        data.to_csv(recv_file, sep='\t', index=False)
+        
 
 def read_nlx_ttl(nlx_dir):
     """Read TTL signals from a Neuralynx data directory."""
 
+    # neo has problems when there are multiple events files, so need
+    # to hack into their data model a little
     reader = neo.io.NeuralynxIO(nlx_dir)
-    ttl_signals = {}
-    for i in range(reader.event_channels_count()):
-        times, durations, labels = reader.get_event_timestamps(
-            event_channel_index=i)
+    event_times = []
+    event_signals = []
+    for chan_id in reader._nev_memmap.keys():
+        data = reader._nev_memmap[chan_id]
+        ids = np.unique(data['event_id'])
 
-        if 'ttl' in labels[0].lower():
-            signal = labels[0].split('(')[1][:-2]
-            ttl_signals[signal] = times
+        # find a channel with up and down pulses
+        ttl = np.zeros(len(ids), dtype=bool)
+        for i, event_id in enumerate(ids):
+            sigs = data['ttl_input'][data['event_id']==event_id]
+            if 0 in sigs and 1 in sigs:
+                ttl[i] = 1
 
-    if '0x0000' not in ttl_signals:
-        raise IOError('No zero signals found in {}'.format(reader.dirname))
-    if '0x0001' not in ttl_signals:
-        raise IOError('No one signals found in {}'.format(reader.dirname))
+        # check to see if there are potential matches
+        if not np.any(ttl):
+            continue
 
-    return ttl_signals
+        # get just the ttl pulses
+        isttl = np.isin(data['event_id'], ids[np.nonzero(ttl)[0]])
+        event_times.append(data['timestamp'][isttl])
+        event_signals.append(data['ttl_input'][isttl])
+
+    times = np.hstack(event_times)
+    signals = np.hstack(event_signals)
+
+    return times, signals
 
 
 def binary2analog(signal_on, signal_off, interval):
