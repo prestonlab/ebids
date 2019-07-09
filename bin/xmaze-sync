@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import warnings
+import pandas as pd
+from bids import BIDSLayout
+from ebids import sync
+
+nlx_dir = sys.argv[1]
+bids_dir = sys.argv[2]
+sub = sys.argv[3]
+ses = sys.argv[4]
+
+sync.prep_nlx_ttl(nlx_dir, bids_dir, sub, ses, 'xmaze')
+
+import pdb; pdb.set_trace()
+
+# read intensity change events sent by display machine
+layout = BIDSLayout(bids_dir)
+runs = layout.get(task='xmaze', subject=sub, session=ses)
+
+events_file = runs[0]
+sync_file = events_file.path.replace('_events.tsv', '_sync.tsv')
+if not os.path.exists(sync_file):
+    warnings.warn('Sync file not found: {}'.format(sync_file),
+                  RuntimeWarning)
+
+send_times = pd.read_csv(sync_file, delimiter='\t').values.flatten()
+send_on = sync_times[::2]
+send_off = sync_times[1::2]
+
+# read ttl events received by nlx
+ttl_signals = sync.read_nlx_ttl(nlx_dir)
+recv_on = ttl_signals['0x0001'] / 10e5
+recv_off = ttl_signals['0x0000'] / 10e5
+
+# convert from events to signals
+sig_send_times, sig_send = sync.binary2analog(send_on, send_off, .001)
+sig_recv_times, sig_recv = sync.binary2analog(recv_on, recv_off, .001)
+
+
+runs[0].get_df().values
+
+#xmaze.convert_session(raw_dir, bids_dir, sub, ses)
