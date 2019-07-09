@@ -16,6 +16,7 @@ def file_len(fname):
             pass
     return i + 1
 
+
 def log2events(log_file, events_file):
     """Convert an X-Maze log file into BIDS events."""
 
@@ -91,6 +92,7 @@ def log2events(log_file, events_file):
     data = data[:n]
     data.to_csv(events_file, sep='\t', index=False)
 
+
 def convert_sync(sync_file, out_file):
     """Convert a sync XML file to a BIDS-compatible table."""
 
@@ -108,6 +110,7 @@ def convert_sync(sync_file, out_file):
     
     data = pd.DataFrame({'onset':send_times, 'signal':send_signals})
     data.to_csv(out_file, sep='\t', index=False)
+
 
 def convert_session(raw_dir, bids_dir, sub, ses):
     """Convert raw data for a session to bids format."""
