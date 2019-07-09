@@ -6,5 +6,5 @@ from ebids import xmaze
 raw_dir = sys.argv[1]
 bids_dir = sys.argv[2]
 sub = sys.argv[3]
-ses = int(sys.argv[4])
+ses = sys.argv[4]
 xmaze.convert_session(raw_dir, bids_dir, sub, ses)

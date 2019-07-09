@@ -119,7 +119,7 @@ def convert_session(raw_dir, bids_dir, sub, ses):
     
     # create the standard session directory
     ses_dir = os.path.join(bids_dir, 'sub-{}'.format(sub),
-                           'ses-{:02d}'.format(ses), 'func')
+                           'ses-{}'.format(ses), 'func')
     if not os.path.exists(ses_dir):
         os.makedirs(ses_dir)
 
@@ -138,7 +138,7 @@ def convert_session(raw_dir, bids_dir, sub, ses):
 
         # convert the log file to a BIDS-style table
         log_file = files[0]
-        run_name = 'sub-{}_ses-{:02d}_task-xmaze_run-{:02d}'.format(
+        run_name = 'sub-{}_ses-{}_task-xmaze_run-{:02d}'.format(
             sub, ses, i)
         events_file = os.path.join(ses_dir, run_name + '_events.tsv')
         log2events(log_file, events_file)
