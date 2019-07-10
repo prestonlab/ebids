@@ -1,6 +1,7 @@
 """Module for processing Neuralynx data."""
 
 import os
+import shutil
 import numpy as np
 import neo.rawio.neuralynxrawio as nlxio
 
@@ -22,6 +23,7 @@ def read_rec_info(nlx_dir):
 
     # read all file headers to get opening and closing times
     rec = {}
+    d_header = {}
     for filename in sorted(os.listdir(nlx_dir)):
         filename = os.path.join(nlx_dir, filename)
 
@@ -40,6 +42,7 @@ def read_rec_info(nlx_dir):
         if recid not in rec:
             rec[recid] = []
         rec[recid].append(filename)
+        d_header[filename] = info
 
     # map together files that were close to each other
     tol = 10
@@ -78,5 +81,45 @@ def read_rec_info(nlx_dir):
     start = [x[0] for x in sortpairs]
     finish = [x[1] for x in sortpairs]
     files = [filt[x] for x in sortpairs]
-            
-    return files, start, finish
+    headers = [[d_header[f] for f in flist] for flist in files]
+
+    rec = []
+    for i in range(len(files)):
+        names = [h['channel_names'][0] for h in headers[i]]
+        d = {'names':names, 'start':start[i], 'finish':finish[i],
+             'files':files[i], 'headers':headers[i]}
+        rec.append(d)
+
+    return rec
+
+
+def split_rec_dir(nlx_dir, out_dir):
+
+    nlx_rec = read_rec_info(nlx_dir)
+    for rec in nlx_rec:
+        # make outer directory
+        dirname = rec['start'].strftime('%Y-%m-%d_%H-%M-%S')
+        dirpath = os.path.join(out_dir, dirname)
+        if not os.path.exists(dirpath):
+            os.makedirs(dirpath)
+
+        # use heuristics to sort the different channel types
+        rectype = []
+        for header in rec['headers']:
+            chan_name = header['channel_names'][0]
+            if 'Spike' in chan_name or 'Micro' in chan_name:
+                chan_type = 'micro'
+            elif 'DC' in chan_name:
+                chan_type = 'dc'
+            else:
+                chan_type = 'ieeg'
+            rectype.append(chan_type)
+
+        for i, src in enumerate(rec['files']):
+            destdir = os.path.join(dirpath, rectype[i])
+            if not os.path.exists(destdir):
+                os.makedirs(destdir)
+
+            filename = rec['names'][i] + os.path.splitext(src)[1]
+            dest = os.path.join(destdir, filename)
+            shutil.copyfile(src, dest)
