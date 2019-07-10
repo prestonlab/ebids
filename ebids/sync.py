@@ -8,6 +8,7 @@ import neo
 import scipy.interpolate as interp
 import scipy.linalg as linalg
 import scipy.optimize as optim
+import matplotlib.pyplot as plt
 from bids import BIDSLayout
 
 def read_nlx_ttl(nlx_dir):
@@ -148,3 +149,23 @@ def load_sync_signal(sync_file, interval=0.01, scale=1):
               'event_times':sync.onset.values,
               'event_signal':sync.signal.values}
     return d_sync
+
+
+def plot_sync_signal(nlx_dir, out_file=None, interval=0.01):
+    """Plot received sync signals."""
+
+    # load file
+    times, signals = read_nlx_ttl(nlx_dir)
+
+    # translate events into continous signals
+    sig_sync_times, sig_sync = binary2analog(times/10e5, signals, interval)
+
+    # plot sync signal
+    fig, ax = plt.subplots(figsize=(20,4), dpi=300)
+    ax.plot(sig_sync_times, sig_sync, linewidth=0.1)
+    plt.tight_layout()
+
+    # print to file
+    if out_file is None:
+        out_file = os.path.join(nlx_dir, 'Events.pdf')
+    fig.savefig(out_file)
