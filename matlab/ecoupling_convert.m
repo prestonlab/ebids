@@ -63,7 +63,7 @@ for i = 1:length(f)
     
     c_task = regexp(f{i}, '_', 'split');
     task = c_task{end};
-    task_full = f{i};
+    task_full = strrep(f{i}, '_', '');
     
     if ismember('run', d.Properties.VariableNames)
         run = d.run;
