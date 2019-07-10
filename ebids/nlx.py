@@ -127,4 +127,4 @@ def split_rec_dir(nlx_dir, out_dir):
 
             filename = rec['names'][i] + os.path.splitext(src)[1]
             dest = os.path.join(destdir, filename)
-            shutil.copyfile(src, dest)
+            shutil.move(src, dest)
