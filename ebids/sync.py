@@ -7,6 +7,7 @@ import pandas as pd
 import neo
 import scipy.interpolate as interp
 import scipy.linalg as linalg
+import scipy.optimize as optim
 from bids import BIDSLayout
 
 def prep_nlx_ttl(nlx_dir, bids_dir, sub, ses, task):
@@ -58,60 +59,114 @@ def read_nlx_ttl(nlx_dir):
     return times, signals
 
 
-def binary2analog(signal_on, signal_off, interval):
+def binary2analog(event_times, event_signal, interval):
     """Generate a signal from binary event times."""
 
-    # combine on and off times
-    signal_times = np.hstack((signal_off.flatten(),
-                              signal_on.flatten()))
-    signal_value = np.hstack((np.zeros(len(signal_off)),
-                              np.ones(len(signal_on))))
-    ind = np.argsort(signal_times)
-
-    # sort by total time
-    sort_times = signal_times[ind]
-    sort_value = signal_value[ind]
-
     # initialize the signal
-    min_time = np.min(signal_times)
-    max_time = np.max(signal_times)
+    min_time = np.min(event_times)
+    max_time = np.max(event_times)
     n_samp = int(np.ceil((max_time - min_time) / interval))
     signal = np.zeros(n_samp)
     times = np.linspace(min_time, max_time, n_samp)
 
     # set each sample based on the most recent event
-    for i in range(n_samp):
-        last_ind = np.nonzero(times[i] >= sort_times)[0][-1]
-        signal[i] = sort_value[last_ind]
+    for i in range(len(event_times)-1):
+        t0 = event_times[i]
+        t1 = event_times[i+1]
+        signal[(times >= t0) & (times < t1)] = event_signal[i]
 
     return times, signal
 
 
-def align(send, recv):
+def find_signal_blocks(times, values, signal, blink, minwait, maxwait, tol):
+    """Find blocks where a specified signal was sent."""
 
-    ns = len(send)
-    nr = len(recv)
-    nshift = nr - ns + 1
-    m = np.zeros(nshift)
-    for i in range(nshift):
-        m[i] = np.corrcoef(send, recv[i:(i+ns)])[0,1]
-    return m
+    # find blinks (periods of a given signal of a given duration)
+    d_time = np.hstack((np.diff(times), 0))
+    blink_start = ((d_time > blink - tol) &
+                   (d_time < blink + tol) & (values == signal))
+    blink_times = times[blink_start]
+
+    # find blinks that are followed by another blink within the
+    # correct time range
+    d_blink = np.hstack((np.diff(blink_times), 0))
+    inseq = (d_blink > minwait-.1) & (d_blink < maxwait+.1)
+
+    # start and finish of each block of blinks
+    breaks = np.nonzero(inseq==False)[0]
+    start = blink_times[np.hstack((0, breaks[:-1] + 1))]
+    finish = blink_times[breaks]
+
+    # account for blink duration at the end of each block
+    adjust = np.array([times[np.nonzero(times==x)[0][0]+1] for x in finish])
+    return start, adjust
 
 
-def align_series(par, send, send_time, recv, recv_time):
+def align1(offset, send, recv):
+    return align([offset, 1], send, recv)
+
+
+def align(par, send, recv):
     """Calculate error in aligning a timeseries with a shorter timeseries."""
     
     # calculate the shifted time for the short series
-    time_hat = par[0] + par[1] * send_time
+    time_hat = par[0] + par[1] * send['times']
+    if (np.any(time_hat > recv['times'][-1]) or
+        np.any(time_hat < recv['times'][0])):
+        err = 1e9
+        return err
+
+    # get bounds for the window
+    start = np.argmin(np.abs(recv['times'] - time_hat[0]))
+    finish = start + len(time_hat)
+    if finish > len(recv['signal']):
+        err = 1e9
+        return err
 
     # interpolate to get the predicted signal
-    f = interp.interp1d(recv_time, recv)
-    recv_hat = f(time_hat)
-    import pdb; pdb.set_trace()
-    err = linalg.norm(recv_hat - recv, 2)
-    
+    time_recv = recv['times'][start:finish]
+    time_interp = np.hstack((time_recv[0], time_hat, time_recv[-1]))
+    signal_interp = np.hstack((send['signal'][0], send['signal'],
+                               send['signal'][-1]))
+    f = interp.interp1d(time_interp, signal_interp)
+    recv_hat = f(time_recv)
+
+    # calculate error
+    err = linalg.norm(recv_hat - recv['signal'][start:finish], 2)
     return err
 
+
+def load_sync_signals(events_file, interval=0.01):
+    """Get events and samples for send and receive signals."""
+
+    # load send file
+    send_file = events_file.path.replace('_events.tsv', '_send.tsv')
+    if not os.path.exists(send_file):
+        warnings.warn('Send file not found: {}'.format(recv_file),
+                      RuntimeWarning)
+    send = pd.read_csv(send_file, delimiter='\t')
+
+    # load receive file
+    recv_file = events_file.path.replace('_events.tsv', '_recv.tsv')
+    if not os.path.exists(recv_file):
+        warnings.warn('Receive file not found: {}'.format(recv_file),
+                      RuntimeWarning)
+    recv = pd.read_csv(recv_file, delimiter='\t')
+
+    # translate events into continous signals
+    sig_send_times, sig_send = binary2analog(send.onset.values,
+                                             send.signal.values, interval)
+    sig_recv_times, sig_recv = binary2analog(recv.onset.values/10e5,
+                                             recv.signal.values, interval)
+    d_send = {'times':sig_send_times, 'signal':sig_send,
+              'event_times':send.onset.values,
+              'event_signal':send.signal.values}
+    d_recv = {'times':sig_recv_times, 'signal':sig_recv,
+              'event_times':recv.onset.values,
+              'event_signal':recv.signal.values}
+    
+    return d_send, d_recv
+    
 
 def align_ttl(ttl_on, ttl_off, sync_on, sync_off):
 

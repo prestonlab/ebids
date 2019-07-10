@@ -14,13 +14,57 @@ ses = sys.argv[4]
 
 sync.prep_nlx_ttl(nlx_dir, bids_dir, sub, ses, 'xmaze')
 
-import pdb; pdb.set_trace()
-
 # read intensity change events sent by display machine
 layout = BIDSLayout(bids_dir)
 runs = layout.get(task='xmaze', subject=sub, session=ses)
 
-events_file = runs[0]
+events_file = runs[-1]
+send, recv = sync.load_sync_signals(events_file)
+
+# method when we have send signals
+spacing = np.min(np.diff(send['event_times'])) / 2
+s_range = send['times'][-1] - send['times'][0]
+ranges = (slice(recv['times'][0], recv['times'][-1]-s_range, spacing),)
+x0 = optim.brute(sync.align1, ranges, (send, recv))
+x = optim.fmin(sync.align, (x0 1), (send, recv))
+
+# method when there are no send signals
+minwait = 1.3
+maxwait = 1.7
+blink = 0.5
+steps = np.cumsum([0, minwait/2, blink, minwait/2])
+vals = np.array([0, 1, 0, 0])
+t_conv, s_conv = sync.binary2analog(steps, vals, .01)
+
+# new method, just using the original event times
+d_recv = np.hstack((np.diff(recv['event_times']/10e5), 0))
+blink_start = ((d_recv > blink-.1) &
+               (d_recv < blink+.1) & (recv['event_signal'] == 1))
+blink_times = recv['event_times'][blink_start]/10e5
+d_blink = np.hstack((np.diff(blink_times), 0))
+inseq = (d_blink > minwait-.1) & (d_blink < maxwait+.1)
+breaks = np.nonzero(inseq==False)[0]
+start = blink_times[np.hstack((0, breaks[:-1] + 1))]
+
+# using the library
+times = recv['event_times']/10e5
+values = recv['event_signal']
+signal = 1
+blink = 0.5
+minwait = 1.3
+maxwait = 1.7
+tol = .1
+start, finish = sync.find_signal_blocks(times, values, signal,
+                                        blink, minwait, maxwait, tol)
+
+f_args = (send, recv)
+bounds = ((recv['times'][0], recv['times'][-1]-s_range), (.99, 1.01))
+res = optim.differential_evolution(sync.align, bounds, f_args)
+
+import pdb; pdb.set_trace()
+
+coef = sync.align_events(events_file)
+
 sync_file = events_file.path.replace('_events.tsv', '_sync.tsv')
 if not os.path.exists(sync_file):
     warnings.warn('Sync file not found: {}'.format(sync_file),
