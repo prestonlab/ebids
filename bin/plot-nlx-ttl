@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+
+import sys
+from ebids import sync
+
+nlx_dir = sys.argv[1]
+
+sync.plot_sync_signal(nlx_dir)
