@@ -36,7 +36,12 @@ def read_rec_info(nlx_dir):
             continue
 
         # All file have more or less the same header structure
-        info = nlxio.read_txt_header(filename)
+        try:
+            info = nlxio.read_txt_header(filename)
+        except ValueError as err:
+            print('Cannot open file: {}'.format(filename))
+            continue
+
         recid = (info['recording_opened'], info['recording_closed'])
 
         if recid not in rec:
