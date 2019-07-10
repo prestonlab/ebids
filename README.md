@@ -27,12 +27,22 @@ If using python for analysis, you'll also want pybids: `pip install pybids`. If 
 
 ## Converting behavioral data
 
-For xmaze data, in the Terminal run:
+### XMaze
+
+In the Terminal run:
 ```bash
 xmaze-convert raw_dir bids_dir sub ses
 ```
 
 where `raw_dir` is the path to the raw behavioral data for one session, `bids_dir` is the root directory of the bids data, sub is a subject code like `DS1902`, and ses is a session code like `01`.
+
+### eCoupling
+
+In Matlab, run:
+```matlab
+ecoupling_convert(raw_dir, bids_dir, sub, ses);
+```
+The inputs are similar to XMaze. The `raw_dir` should contain a file called `header.mat`.
 
 ## Reading BIDS data
 
