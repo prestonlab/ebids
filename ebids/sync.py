@@ -132,7 +132,7 @@ def align(par, send, recv):
     return err
 
 
-def load_sync_signal(sync_file, interval=0.01):
+def load_sync_signal(sync_file, interval=0.01, scale=1):
     """Get events and samples for send and receive signals."""
 
     # load file
@@ -142,10 +142,9 @@ def load_sync_signal(sync_file, interval=0.01):
     sync = pd.read_csv(sync_file, delimiter='\t')
 
     # translate events into continous signals
-    sig_sync_times, sig_sync = binary2analog(sync.onset.values,
+    sig_sync_times, sig_sync = binary2analog(sync.onset.values * scale,
                                              sync.signal.values, interval)
     d_sync = {'times':sig_sync_times, 'signal':sig_sync,
               'event_times':sync.onset.values,
               'event_signal':sync.signal.values}
-    
     return d_sync
