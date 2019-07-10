@@ -10,21 +10,6 @@ import scipy.linalg as linalg
 import scipy.optimize as optim
 from bids import BIDSLayout
 
-def prep_nlx_ttl(nlx_dir, bids_dir, sub, ses, task):
-    """Prepare NLX TTLs for task alignment."""
-
-    # read all TTL signals from the NLX directory
-    recv_times, recv_signals = read_nlx_ttl(nlx_dir)
-    data = pd.DataFrame({'onset':recv_times, 'signal':recv_signals})
-
-    # write to a file for each run in the task (will be same for each)
-    layout = BIDSLayout(bids_dir)
-    runs = layout.get(subject=sub, session=ses, task=task)
-    for events_file in runs:
-        recv_file = events_file.path.replace('_events.tsv', '_recv.tsv')
-        data.to_csv(recv_file, sep='\t', index=False)
-        
-
 def read_nlx_ttl(nlx_dir):
     """Read TTL signals from a Neuralynx data directory."""
 
@@ -58,6 +43,21 @@ def read_nlx_ttl(nlx_dir):
 
     return times, signals
 
+
+def prep_nlx_ttl(nlx_dir, bids_dir, sub, ses, task):
+    """Prepare NLX TTLs for task alignment."""
+
+    # read all TTL signals from the NLX directory
+    recv_times, recv_signals = read_nlx_ttl(nlx_dir)
+    data = pd.DataFrame({'onset':recv_times, 'signal':recv_signals})
+
+    # write to a file for each run in the task (will be same for each)
+    layout = BIDSLayout(bids_dir)
+    runs = layout.get(subject=sub, session=ses, task=task)
+    for events_file in runs:
+        recv_file = events_file.path.replace('_events.tsv', '_recv.tsv')
+        data.to_csv(recv_file, sep='\t', index=False)
+        
 
 def binary2analog(event_times, event_signal, interval):
     """Generate a signal from binary event times."""
@@ -136,40 +136,20 @@ def align(par, send, recv):
     return err
 
 
-def load_sync_signals(events_file, interval=0.01):
+def load_sync_signal(sync_file, interval=0.01):
     """Get events and samples for send and receive signals."""
 
-    # load send file
-    send_file = events_file.path.replace('_events.tsv', '_send.tsv')
-    if not os.path.exists(send_file):
-        warnings.warn('Send file not found: {}'.format(recv_file),
+    # load file
+    if not os.path.exists(sync_file):
+        warnings.warn('Sync file not found: {}'.format(sync_file),
                       RuntimeWarning)
-    send = pd.read_csv(send_file, delimiter='\t')
-
-    # load receive file
-    recv_file = events_file.path.replace('_events.tsv', '_recv.tsv')
-    if not os.path.exists(recv_file):
-        warnings.warn('Receive file not found: {}'.format(recv_file),
-                      RuntimeWarning)
-    recv = pd.read_csv(recv_file, delimiter='\t')
+    sync = pd.read_csv(sync_file, delimiter='\t')
 
     # translate events into continous signals
-    sig_send_times, sig_send = binary2analog(send.onset.values,
-                                             send.signal.values, interval)
-    sig_recv_times, sig_recv = binary2analog(recv.onset.values/10e5,
-                                             recv.signal.values, interval)
-    d_send = {'times':sig_send_times, 'signal':sig_send,
-              'event_times':send.onset.values,
-              'event_signal':send.signal.values}
-    d_recv = {'times':sig_recv_times, 'signal':sig_recv,
-              'event_times':recv.onset.values,
-              'event_signal':recv.signal.values}
+    sig_sync_times, sig_sync = binary2analog(sync.onset.values,
+                                             sync.signal.values, interval)
+    d_sync = {'times':sig_sync_times, 'signal':sig_sync,
+              'event_times':sync.onset.values,
+              'event_signal':sync.signal.values}
     
-    return d_send, d_recv
-    
-
-def align_ttl(ttl_on, ttl_off, sync_on, sync_off):
-
-    ttl_min = np.min(np.hstack((ttl_on, ttl_off)))
-    ttl_max = np.max(np.hstack((ttl_on, ttl_off)))
-    #ttl_signal = np.
+    return d_sync
