@@ -17,6 +17,8 @@ Also add ebids to your python path:
 export PYTHONPATH=$PYTHONPATH:$HOME/analysis/ebids
 ```
 
+To install the Matlab scripts, add `ebids/matlab` to your Matlab path.
+
 To run those commands automatically, put them in `$HOME/.bashrc`.
 
 ### Dependencies
