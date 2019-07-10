@@ -66,15 +66,11 @@ def binary2analog(event_times, event_signal, interval):
     min_time = np.min(event_times)
     max_time = np.max(event_times)
     n_samp = int(np.ceil((max_time - min_time) / interval))
-    signal = np.zeros(n_samp)
-    times = np.linspace(min_time, max_time, n_samp)
 
     # set each sample based on the most recent event
-    for i in range(len(event_times)-1):
-        t0 = event_times[i]
-        t1 = event_times[i+1]
-        signal[(times >= t0) & (times < t1)] = event_signal[i]
-
+    times = np.linspace(min_time, max_time, n_samp)
+    f = interp.interp1d(event_times, event_signal, 'previous')
+    signal = f(times)
     return times, signal
 
 
