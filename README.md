@@ -3,6 +3,8 @@ Code to translate electrophysiological data to BIDS format.
 
 ## Installation
 
+### eBIDS
+
 Currently macOS/Linux only.
 
 Add the ebids binary directory to your path. For example, if ebids is in your home directory under analysis:
@@ -17,7 +19,9 @@ export PYTHONPATH=$PYTHONPATH:$HOME/analysis/ebids
 
 To run those commands automatically, put them in `$HOME/.bashrc`.
 
-TODO: support for standard package installation.
+### Dependencies
+
+To work with Neuralynx data in python (used for some preprocessing scripts), download our [fork of the Neo project](https://github.com/prestonlab/python-neo) and install by adding the project directory to your PYTHONPATH (similar to above for ebids).
 
 If using python for analysis, you'll also want pybids: `pip install pybids`. If using Matlab, try [bids-matlab](https://github.com/bids-standard/bids-matlab).
 
