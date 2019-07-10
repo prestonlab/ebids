@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+
+import sys
+from ebids import nlx
+
+nlx_dir = sys.argv[1]
+out_dir = sys.argv[2]
+nlx.split_rec_dir(nlx_dir, out_dir)
