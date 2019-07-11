@@ -47,6 +47,8 @@ rt.study = {};
 rt.test = {'rt' 'resp'};
 rt.match = {'rt' 'resp'};
 
+time_fields = {'onset' 'duration' 'response_time' 'iti' 'delay'};
+
 % fields to exclude if they already exist
 exclude = {'fam_rt' 'fam' 'rt' 'resp' ...
            'onset' 'duration' 'trial_type' 'response_time' 'response'};
@@ -84,11 +86,11 @@ for i = 1:length(f)
         start = dr.(fp{1});
         finish = dr.(fp{2});
         
-        onset = [onset; start];
-        duration = [duration; finish - start];
-        offset = [offset; finish];
+        onset = [onset; round(start, 3)];
+        duration = [duration; round(finish - start, 3)];
+        offset = [offset; round(finish, 3)];
         if ~isempty(fr)
-            response_time = [response_time; dr.(fr{1})];
+            response_time = [response_time; round(dr.(fr{1}), 3)];
             response = [response; dr.(fr{2})];
         end
     end
@@ -102,6 +104,10 @@ for i = 1:length(f)
         end
         if ismember(f2{j}, exclude)
             include(j) = false;
+        end
+        if ismember(f2{j}, time_fields) || ...
+                contains(f2{j}, '_onset') || contains(f2{j}, '_rt')
+            d.(f2{j}) = round(d.(f2{j}), 3);
         end
     end
     
