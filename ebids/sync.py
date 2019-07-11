@@ -153,7 +153,7 @@ def load_sync_signal(sync_file, interval=0.01, scale=1):
     sig_sync_times, sig_sync = binary2analog(sync.onset.values * scale,
                                              sync.signal.values, interval)
     d_sync = {'times':sig_sync_times, 'signal':sig_sync,
-              'event_times':sync.onset.values,
+              'event_times':sync.onset.values * scale,
               'event_signal':sync.signal.values}
     return d_sync
 
@@ -168,14 +168,25 @@ def align_events_reg(events_file, send_file, recv_file,
 
     # initial brute-force search for the correct offset
     print(f'Aligning events: {events_file}')
-    spacing = np.min(np.diff(send['event_times'])) / 2
+    spacing = np.min(np.diff(send['event_times'])) / 4
     s_range = send['times'][-1] - send['times'][0]
     ranges = (slice(recv['times'][0], recv['times'][-1]-s_range, spacing),)
     x0 = optim.brute(align1, ranges, (send, recv))
 
     # refining search that allows slope to change
-    x = optim.fmin(align, (x0, 1), (send, recv))
+    x = optim.fmin(align, (x0, 1), (send, recv), disp=False)
+
+    # display a summary of the alignment
     sse = align(x, send, recv)
+    mse = sse / len(send['times'])
+    sync_start = recv['event_times'][0]
+    start = x[0] + x[1] * send['event_times'][0]
+    finish = x[0] + x[1] * send['event_times'][-1]
+    print(f'Offset: {x[0]:.0f}')
+    print(f'Scale:  {x[1]:.8f}')
+    print(f'MSE:    {mse:.8f}')
+    print(f'Start:  {start-sync_start:.0f} s')
+    print(f'Stop:   {finish-sync_start:.0f} s')
 
     # load events
     events = pd.read_csv(events_file, delimiter='\t')
