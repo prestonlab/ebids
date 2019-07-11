@@ -99,6 +99,7 @@ def read_rec_info(nlx_dir):
 
 
 def split_rec_dir(nlx_dir, out_dir):
+    """Split a directory with multiple recordings."""
 
     nlx_rec = read_rec_info(nlx_dir)
     for rec in nlx_rec:
