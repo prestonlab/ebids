@@ -158,6 +158,38 @@ def load_sync_signal(sync_file, interval=0.01, scale=1):
     return d_sync
 
 
+def align_events_reg(events_file, send_file, recv_file,
+                     send_scale=1, recv_scale=1):
+    """Align sync pulses and write recording times for events."""
+
+    # load send and receive pulses
+    send = load_sync_signal(send_file, scale=send_scale)
+    recv = load_sync_signal(recv_file, scale=recv_scale)
+
+    # initial brute-force search for the correct offset
+    print(f'Aligning events: {events_file}')
+    spacing = np.min(np.diff(send['event_times'])) / 2
+    s_range = send['times'][-1] - send['times'][0]
+    ranges = (slice(recv['times'][0], recv['times'][-1]-s_range, spacing),)
+    x0 = optim.brute(align1, ranges, (send, recv))
+
+    # refining search that allows slope to change
+    x = optim.fmin(align, (x0, 1), (send, recv))
+    sse = align(x, send, recv)
+
+    # load events
+    events = pd.read_csv(events_file, delimiter='\t')
+
+    # get equivalent times in the recording
+    rec_times = (x[0] + x[1] * events.onset) / recv_scale
+    events['ieeg'] = rec_times.astype(int)
+
+    # write events back out with the new field
+    events.to_csv(events_file, sep='\t', float_format='%.3f',
+                  index=False, na_rep='n/a')
+    print('Events updated with iEEG time.')
+
+
 def plot_sync_signal(nlx_dir, out_file=None, interval=0.01):
     """Plot received sync signals."""
 
