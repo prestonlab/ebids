@@ -201,6 +201,24 @@ def align_events_reg(events_file, send_file, recv_file,
     print('Events updated with iEEG time.')
 
 
+def align_session(bids_dir, sub, ses, send_scale=1, recv_scale=1):
+    """Align sync pulses for all runs in a session."""
+
+    layout = BIDSLayout(bids_dir)
+    runs = layout.get(subject=sub, session=ses)
+    send_times = []
+    send_signal = []
+    recv_times = []
+    recv_signal = []
+    for events in runs:
+        events_file = events.path
+        send_file = events_file.replace('_events.tsv', '_send.tsv')
+        recv_file = events_file.replace('_events.tsv', '_recv.tsv')
+        align_events_reg(events_file, send_file, recv_file,
+                         send_scale, recv_scale)
+
+
+
 def plot_sync_signal(nlx_dir, out_file=None, interval=0.01):
     """Plot received sync signals."""
 
