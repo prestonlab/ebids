@@ -72,6 +72,8 @@ def binary2analog(event_times, event_signal, interval):
     min_time = np.min(event_times)
     max_time = np.max(event_times)
     n_samp = int(np.ceil((max_time - min_time) / interval))
+    if n_samp > 10e8:
+        raise ValueError('Too many samples to hold in memory.')
 
     # set each sample based on the most recent event
     times = np.linspace(min_time, max_time, n_samp)
