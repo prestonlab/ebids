@@ -45,16 +45,21 @@ def read_nlx_ttl(nlx_dir):
     return times, signals
 
 
-def prep_nlx_ttl(nlx_dir, bids_dir, sub, ses, task):
+def prep_nlx_ttl(bids_dir, sub, ses):
     """Prepare NLX TTLs for task alignment."""
 
-    # read all TTL signals from the NLX directory
+    # get the session directory
+    layout = BIDSLayout(bids_dir)
+    runs = layout.get(subject=sub, session=ses)
+
+    # read TTL signals from the NLX directory
+    nlx_dir = os.path.join(runs[0].dirname, f'sub-{sub}_ses-{ses}_ieeg')
     recv_times, recv_signals = read_nlx_ttl(nlx_dir)
     data = pd.DataFrame({'onset':recv_times, 'signal':recv_signals})
 
-    # write to a file for each run in the task (will be same for each)
-    layout = BIDSLayout(bids_dir)
-    runs = layout.get(subject=sub, session=ses, task=task)
+    # write to a file for each run in the task (will be same for each;
+    # there will be a sync solution for each run separately, correcting
+    # for any clock drift across runs)
     for events_file in runs:
         recv_file = events_file.path.replace('_events.tsv', '_recv.tsv')
         data.to_csv(recv_file, sep='\t', index=False)
