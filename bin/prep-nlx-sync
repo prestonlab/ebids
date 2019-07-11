@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+
+import sys
+from ebids import sync
+
+bids_dir = sys.argv[1]
+sub = sys.argv[2]
+ses = sys.argv[3]
+sync.prep_nlx_ttl(bids_dir, sub, ses)
