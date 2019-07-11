@@ -134,7 +134,7 @@ for i = 1:length(f)
         
         % write out events
         filepath = fullfile(task_dir, [filebase '_events.tsv']);
-        writetable(t_run, filepath, 'Delimiter', '\t', 'FileType', 'text');
+        write_tsv(t_run, filepath);
 
         % get sync information in order
         run_onset = full_onset(run==urun(j));
@@ -150,6 +150,6 @@ for i = 1:length(f)
         % write out send signals
         t_send = table(onset, signal);
         filepath = fullfile(task_dir, [filebase '_send.tsv']);
-        writetable(t_send, filepath, 'Delimiter', '\t', 'FileType', 'text');
+        write_tsv(t_send, filepath);
     end
 end
