@@ -194,7 +194,25 @@ def align_run_reg(send_file, recv_file, sync_file,
         json.dump(d, f)
 
 
-def sync_events(events_file, sync_file):
+def align_session(bids_dir, sub, ses, rec, send_scale=1, recv_scale=1,
+                  spacing=0.05):
+    """Align sync pulses for all runs in a session."""
+
+    layout = BIDSLayout(bids_dir)
+    runs = layout.get(subject=sub, session=ses)
+    for events in runs:
+        # get send and receive files
+        events_file = events.path
+        send_file = events_file.replace('_events.tsv', '_send.tsv')
+        recv_file = events_file.replace('_events.tsv', '_recv.tsv')
+
+        # save sync information in a separate file
+        sync_file = events_file.replace('_events.tsv', f'_{rec}.json')
+        align_run_reg(send_file, recv_file, sync_file,
+                      send_scale, recv_scale, spacing)
+
+
+def sync_events(events_file, sync_file, rec):
     """Add recording times to events."""
 
     # load events
@@ -205,29 +223,22 @@ def sync_events(events_file, sync_file):
 
     # get equivalent times in the recording
     rec_times = (sync['offset'] + sync['slope'] * events.onset) * sync['scale']
-    events['ieeg'] = rec_times.astype(int)
+    events[rec] = rec_times.astype(int)
 
     # write events back out with the new field
     events.to_csv(events_file, sep='\t', float_format='%.3f',
                   index=False, na_rep='n/a')
 
 
-def align_session(bids_dir, sub, ses, send_scale=1, recv_scale=1,
-                  spacing=0.05):
-    """Align sync pulses for all runs in a session."""
+def sync_session(bids_dir, sub, ses, rec):
+    """Add recording times to all events in a session."""
 
     layout = BIDSLayout(bids_dir)
     runs = layout.get(subject=sub, session=ses)
-    send_times = []
-    send_signal = []
-    recv_times = []
-    recv_signal = []
     for events in runs:
         events_file = events.path
-        send_file = events_file.replace('_events.tsv', '_send.tsv')
-        recv_file = events_file.replace('_events.tsv', '_recv.tsv')
-        align_run_reg(send_file, recv_file,
-                      send_scale, recv_scale, spacing)
+        sync_file = events_file.replace('_events.tsv', f'_{rec}.json')
+        sync_events(events_file, sync_file, rec)
 
 
 def plot_sync_signal(nlx_dir, out_file=None, interval=0.01):
