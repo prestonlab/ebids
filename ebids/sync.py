@@ -159,7 +159,7 @@ def load_sync_signal(sync_file, interval=0.01, scale=1):
 
 
 def align_events_reg(events_file, send_file, recv_file,
-                     send_scale=1, recv_scale=1):
+                     send_scale=1, recv_scale=1, spacing=0.05):
     """Align sync pulses and write recording times for events."""
 
     # load send and receive pulses
@@ -168,7 +168,6 @@ def align_events_reg(events_file, send_file, recv_file,
 
     # initial brute-force search for the correct offset
     print(f'Aligning events: {events_file}')
-    spacing = np.min(np.diff(send['event_times'])) / 4
     s_range = send['times'][-1] - send['times'][0]
     ranges = (slice(recv['times'][0], recv['times'][-1]-s_range, spacing),)
     x0 = optim.brute(align1, ranges, (send, recv))
@@ -201,7 +200,8 @@ def align_events_reg(events_file, send_file, recv_file,
     print('Events updated with iEEG time.')
 
 
-def align_session(bids_dir, sub, ses, send_scale=1, recv_scale=1):
+def align_session(bids_dir, sub, ses, send_scale=1, recv_scale=1,
+                  spacing=0.05):
     """Align sync pulses for all runs in a session."""
 
     layout = BIDSLayout(bids_dir)
@@ -215,8 +215,7 @@ def align_session(bids_dir, sub, ses, send_scale=1, recv_scale=1):
         send_file = events_file.replace('_events.tsv', '_send.tsv')
         recv_file = events_file.replace('_events.tsv', '_recv.tsv')
         align_events_reg(events_file, send_file, recv_file,
-                         send_scale, recv_scale)
-
+                         send_scale, recv_scale, spacing)
 
 
 def plot_sync_signal(nlx_dir, out_file=None, interval=0.01):
@@ -236,4 +235,39 @@ def plot_sync_signal(nlx_dir, out_file=None, interval=0.01):
     # print to file
     if out_file is None:
         out_file = os.path.join(nlx_dir, 'Events.pdf')
+    fig.savefig(out_file)
+
+
+def plot_sync_session(bids_dir, sub, ses, out_file=None, scale=1):
+    """Plot all sync pulses and events for a session."""
+
+    layout = BIDSLayout(bids_dir)
+    run_sync = []
+    run_signal = []
+    run_event = []
+    runs = layout.get(subject=sub, session=ses)
+    for events in runs:
+        events_file = events.path
+        recv_file = events_file.replace('_events.tsv', '_recv.tsv')
+        recv = load_sync_signal(recv_file, scale=scale)
+        events = pd.read_csv(events_file, delimiter='\t')
+        
+        run_sync.append(recv['event_times'])
+        run_signal.append(recv['event_signal'])
+        run_event.append(events.ieeg)
+
+    sync = np.hstack(run_sync)
+    signal = np.hstack(run_signal)
+    event = np.hstack(run_event)
+    sig_sync_times, sig_sync = binary2analog(sync, signal, 0.01)
+
+    fig, ax = plt.subplots(figsize=(20,4), dpi=300)
+    ax.plot(sig_sync_times, sig_sync, linewidth=0.1)
+    ax.vlines(event * scale, 0, 1, colors='r', linewidth=0.5)
+    plt.tight_layout()
+
+    # print to file
+    if out_file is None:
+        out_file = os.path.join(runs[0].dirname,
+                                f'sub-{sub}_ses-{ses}_sync.pdf')
     fig.savefig(out_file)
