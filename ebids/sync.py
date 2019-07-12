@@ -12,60 +12,6 @@ import scipy.optimize as optim
 import matplotlib.pyplot as plt
 from bids import BIDSLayout
 
-def read_nlx_ttl(nlx_dir):
-    """Read TTL signals from a Neuralynx data directory."""
-
-    # neo has problems when there are multiple events files, so need
-    # to hack into their data model a little
-    reader = neo.io.NeuralynxIO(nlx_dir)
-    event_times = []
-    event_signals = []
-    for chan_id in reader._nev_memmap.keys():
-        data = reader._nev_memmap[chan_id]
-        ids = np.unique(data['event_id'])
-
-        # find a channel with up and down pulses
-        ttl = np.zeros(len(ids), dtype=bool)
-        for i, event_id in enumerate(ids):
-            sigs = data['ttl_input'][data['event_id']==event_id]
-            if 0 in sigs and 1 in sigs:
-                ttl[i] = 1
-
-        # check to see if there are potential matches
-        if not np.any(ttl):
-            continue
-
-        # get just the ttl pulses
-        isttl = np.isin(data['event_id'], ids[np.nonzero(ttl)[0]])
-        event_times.append(data['timestamp'][isttl])
-        event_signals.append(data['ttl_input'][isttl])
-
-    times = np.hstack(event_times)
-    signals = np.hstack(event_signals)
-
-    return times, signals
-
-
-def prep_nlx_ttl(bids_dir, sub, ses):
-    """Prepare NLX TTLs for task alignment."""
-
-    # get the session directory
-    layout = BIDSLayout(bids_dir)
-    runs = layout.get(subject=sub, session=ses)
-
-    # read TTL signals from the NLX directory
-    nlx_dir = os.path.join(runs[0].dirname, f'sub-{sub}_ses-{ses}_ieeg')
-    recv_times, recv_signals = read_nlx_ttl(nlx_dir)
-    data = pd.DataFrame({'onset':recv_times, 'signal':recv_signals})
-
-    # write to a file for each run in the task (will be same for each;
-    # there will be a sync solution for each run separately, correcting
-    # for any clock drift across runs)
-    for events_file in runs:
-        recv_file = events_file.path.replace('_events.tsv', '_recv.tsv')
-        data.to_csv(recv_file, sep='\t', index=False)
-        
-
 def binary2analog(event_times, event_signal, interval):
     """Generate a signal from binary event times."""
 
@@ -239,26 +185,6 @@ def sync_session(bids_dir, sub, ses, rec):
         events_file = events.path
         sync_file = events_file.replace('_events.tsv', f'_{rec}.json')
         sync_events(events_file, sync_file, rec)
-
-
-def plot_sync_signal(nlx_dir, out_file=None, interval=0.01):
-    """Plot received sync signals."""
-
-    # load file
-    times, signals = read_nlx_ttl(nlx_dir)
-
-    # translate events into continous signals
-    sig_sync_times, sig_sync = binary2analog(times/10e5, signals, interval)
-
-    # plot sync signal
-    fig, ax = plt.subplots(figsize=(20,4), dpi=300)
-    ax.plot(sig_sync_times, sig_sync, linewidth=0.1)
-    plt.tight_layout()
-
-    # print to file
-    if out_file is None:
-        out_file = os.path.join(nlx_dir, 'Events.pdf')
-    fig.savefig(out_file)
 
 
 def plot_sync_session(bids_dir, sub, ses, out_file=None, scale=1):
