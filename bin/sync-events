@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import warnings
+import pandas as pd
+from ebids import sync
+
+bids_dir = sys.argv[1]
+sub = sys.argv[2]
+ses = sys.argv[3]
+
+sync.sync_session(bids_dir, sub, ses, 'ieeg')
