@@ -10,4 +10,4 @@ bids_dir = sys.argv[1]
 sub = sys.argv[2]
 ses = sys.argv[3]
 
-sync.align_session(bids_dir, sub, ses, recv_scale=1/10e5)
+sync.align_session(bids_dir, sub, ses, 'ieeg', recv_scale=1/10e5)
