@@ -4,6 +4,7 @@ import os
 import glob
 import numpy as np
 import pandas as pd
+import json
 import neo
 import scipy.interpolate as interp
 import scipy.linalg as linalg
@@ -158,16 +159,16 @@ def load_sync_signal(sync_file, interval=0.01, scale=1):
     return d_sync
 
 
-def align_events_reg(events_file, send_file, recv_file,
-                     send_scale=1, recv_scale=1, spacing=0.05):
-    """Align sync pulses and write recording times for events."""
+def align_run_reg(send_file, recv_file, sync_file,
+                  send_scale=1, recv_scale=1, spacing=0.05):
+    """Align sync pulses for a run using regression."""
 
     # load send and receive pulses
     send = load_sync_signal(send_file, scale=send_scale)
     recv = load_sync_signal(recv_file, scale=recv_scale)
 
     # initial brute-force search for the correct offset
-    print(f'Aligning events: {events_file}')
+    print(f'Aligning sync pulses: {send_file}')
     s_range = send['times'][-1] - send['times'][0]
     ranges = (slice(recv['times'][0], recv['times'][-1]-s_range, spacing),)
     x0 = optim.brute(align1, ranges, (send, recv))
@@ -187,17 +188,28 @@ def align_events_reg(events_file, send_file, recv_file,
     print(f'Start:  {start-sync_start:.0f} s')
     print(f'Stop:   {finish-sync_start:.0f} s')
 
+    # write to a sync file
+    d = {'offset':x[0], 'slope':x[1], 'scale':1/recv_scale}
+    with open(sync_file, 'w') as f:
+        json.dump(d, f)
+
+
+def sync_events(events_file, sync_file):
+    """Add recording times to events."""
+
     # load events
     events = pd.read_csv(events_file, delimiter='\t')
 
+    with open(sync_file, 'r') as f:
+        sync = json.load(f)
+
     # get equivalent times in the recording
-    rec_times = (x[0] + x[1] * events.onset) / recv_scale
+    rec_times = (sync['offset'] + sync['slope'] * events.onset) * sync['scale']
     events['ieeg'] = rec_times.astype(int)
 
     # write events back out with the new field
     events.to_csv(events_file, sep='\t', float_format='%.3f',
                   index=False, na_rep='n/a')
-    print('Events updated with iEEG time.')
 
 
 def align_session(bids_dir, sub, ses, send_scale=1, recv_scale=1,
@@ -214,8 +226,8 @@ def align_session(bids_dir, sub, ses, send_scale=1, recv_scale=1,
         events_file = events.path
         send_file = events_file.replace('_events.tsv', '_send.tsv')
         recv_file = events_file.replace('_events.tsv', '_recv.tsv')
-        align_events_reg(events_file, send_file, recv_file,
-                         send_scale, recv_scale, spacing)
+        align_run_reg(send_file, recv_file,
+                      send_scale, recv_scale, spacing)
 
 
 def plot_sync_signal(nlx_dir, out_file=None, interval=0.01):
