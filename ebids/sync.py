@@ -88,7 +88,7 @@ def align(par, send, recv):
 
 
 def load_sync_signal(sync_file, interval=0.01, scale=1):
-    """Get events and samples for send and receive signals."""
+    """Get events and samples for a set of sync signals."""
 
     # load file
     if not os.path.exists(sync_file):
