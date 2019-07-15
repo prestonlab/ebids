@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import neo
 import neo.rawio.neuralynxrawio as nlxio
 from bids import BIDSLayout
+import sync
+
 
 def timediff(t1, t2):
     """Difference in seconds between datetimes."""
@@ -42,7 +44,7 @@ def read_rec_info(nlx_dir):
         # All file have more or less the same header structure
         try:
             info = nlxio.read_txt_header(filename)
-        except ValueError as err:
+        except ValueError:
             print('Cannot open file: {}'.format(filename))
             continue
 
@@ -81,7 +83,7 @@ def read_rec_info(nlx_dir):
         newpair = (dt_dict[dtpair[0]], dt_dict[dtpair[1]])
         if newpair not in filt:
             filt[newpair] = []
-            
+
         for filename in rec[dtpair]:
             filt[newpair].append(filename)
 
@@ -95,8 +97,8 @@ def read_rec_info(nlx_dir):
     rec = []
     for i in range(len(files)):
         names = [h['channel_names'][0] for h in headers[i]]
-        d = {'names':names, 'start':start[i], 'finish':finish[i],
-             'files':files[i], 'headers':headers[i]}
+        d = {'names': names, 'start': start[i], 'finish': finish[i],
+             'files': files[i], 'headers': headers[i]}
         rec.append(d)
 
     return rec
@@ -150,7 +152,7 @@ def read_nlx_ttl(nlx_dir):
         # find a channel with up and down pulses
         ttl = np.zeros(len(ids), dtype=bool)
         for i, event_id in enumerate(ids):
-            sigs = data['ttl_input'][data['event_id']==event_id]
+            sigs = data['ttl_input'][data['event_id'] == event_id]
             if 0 in sigs and 1 in sigs:
                 ttl[i] = 1
 
@@ -178,7 +180,7 @@ def prep_nlx_ttl(bids_dir, sub, ses):
     # read TTL signals from the NLX directory
     nlx_dir = os.path.join(runs[0].dirname, f'sub-{sub}_ses-{ses}_ieeg')
     recv_times, recv_signals = read_nlx_ttl(nlx_dir)
-    data = pd.DataFrame({'onset':recv_times, 'signal':recv_signals})
+    data = pd.DataFrame({'onset': recv_times, 'signal': recv_signals})
 
     # write to a file for each run in the task (will be same for each;
     # there will be a sync solution for each run separately, correcting
@@ -195,10 +197,10 @@ def plot_nlx_ttl(nlx_dir, out_file=None, interval=0.01):
     times, signals = read_nlx_ttl(nlx_dir)
 
     # translate events into continous signals
-    sig_sync_times, sig_sync = binary2analog(times/10e5, signals, interval)
+    sig_sync_times, sig_sync = sync.binary2analog(times / 10e5, signals, interval)
 
     # plot sync signal
-    fig, ax = plt.subplots(figsize=(20,4), dpi=300)
+    fig, ax = plt.subplots(figsize=(20, 4), dpi=300)
     ax.plot(sig_sync_times, sig_sync, linewidth=0.1)
     plt.tight_layout()
 

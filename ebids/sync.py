@@ -1,16 +1,16 @@
 """Module for processing sync pulses."""
 
+import json
 import os
-import glob
+import warnings
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import json
-import neo
 import scipy.interpolate as interp
 import scipy.linalg as linalg
 import scipy.optimize as optim
-import matplotlib.pyplot as plt
 from bids import BIDSLayout
+
 
 def binary2analog(event_times, event_signal, interval):
     """Generate a signal from binary event times."""
@@ -41,15 +41,15 @@ def find_signal_blocks(times, values, signal, blink, minwait, maxwait, tol):
     # find blinks that are followed by another blink within the
     # correct time range
     d_blink = np.hstack((np.diff(blink_times), 0))
-    inseq = (d_blink > minwait-.1) & (d_blink < maxwait+.1)
+    inseq = (d_blink > minwait - .1) & (d_blink < maxwait + .1)
 
     # start and finish of each block of blinks
-    breaks = np.nonzero(inseq==False)[0]
+    breaks = np.nonzero(inseq == False)[0]
     start = blink_times[np.hstack((0, breaks[:-1] + 1))]
     finish = blink_times[breaks]
 
     # account for blink duration at the end of each block
-    adjust = np.array([times[np.nonzero(times==x)[0][0]+1] for x in finish])
+    adjust = np.array([times[np.nonzero(times == x)[0][0] + 1] for x in finish])
     return start, adjust
 
 
@@ -59,11 +59,11 @@ def align1(offset, send, recv):
 
 def align(par, send, recv):
     """Calculate error in aligning a timeseries with a shorter timeseries."""
-    
+
     # calculate the shifted time for the short series
     time_hat = par[0] + par[1] * send['times']
     if (np.any(time_hat > recv['times'][-1]) or
-        np.any(time_hat < recv['times'][0])):
+            np.any(time_hat < recv['times'][0])):
         err = 1e9
         return err
 
@@ -96,12 +96,12 @@ def load_sync_signal(sync_file, interval=0.01, scale=1):
                       RuntimeWarning)
     sync = pd.read_csv(sync_file, delimiter='\t')
 
-    # translate events into continous signals
+    # translate events into continuous signals
     sig_sync_times, sig_sync = binary2analog(sync.onset.values * scale,
                                              sync.signal.values, interval)
-    d_sync = {'times':sig_sync_times, 'signal':sig_sync,
-              'event_times':sync.onset.values * scale,
-              'event_signal':sync.signal.values}
+    d_sync = {'times': sig_sync_times, 'signal': sig_sync,
+              'event_times': sync.onset.values * scale,
+              'event_signal': sync.signal.values}
     return d_sync
 
 
@@ -116,7 +116,7 @@ def align_run_reg(send_file, recv_file, sync_file,
     # initial brute-force search for the correct offset
     print(f'Aligning sync pulses: {send_file}')
     s_range = send['times'][-1] - send['times'][0]
-    ranges = (slice(recv['times'][0], recv['times'][-1]-s_range, spacing),)
+    ranges = (slice(recv['times'][0], recv['times'][-1] - s_range, spacing),)
     x0 = optim.brute(align1, ranges, (send, recv))
 
     # refining search that allows slope to change
@@ -131,11 +131,11 @@ def align_run_reg(send_file, recv_file, sync_file,
     print(f'Offset: {x[0]:.0f}')
     print(f'Scale:  {x[1]:.8f}')
     print(f'MSE:    {mse:.8f}')
-    print(f'Start:  {start-sync_start:.0f} s')
-    print(f'Stop:   {finish-sync_start:.0f} s')
+    print(f'Start:  {start - sync_start:.0f} s')
+    print(f'Stop:   {finish - sync_start:.0f} s')
 
     # write to a sync file
-    d = {'offset':x[0], 'slope':x[1], 'scale':1/recv_scale}
+    d = {'offset': x[0], 'slope': x[1], 'scale': 1 / recv_scale}
     with open(sync_file, 'w') as f:
         json.dump(d, f)
 
@@ -200,7 +200,7 @@ def plot_sync_session(bids_dir, sub, ses, out_file=None, scale=1):
         recv_file = events_file.replace('_events.tsv', '_recv.tsv')
         recv = load_sync_signal(recv_file, scale=scale)
         events = pd.read_csv(events_file, delimiter='\t')
-        
+
         run_sync.append(recv['event_times'])
         run_signal.append(recv['event_signal'])
         run_event.append(events.ieeg)
@@ -210,7 +210,7 @@ def plot_sync_session(bids_dir, sub, ses, out_file=None, scale=1):
     event = np.hstack(run_event)
     sig_sync_times, sig_sync = binary2analog(sync, signal, 0.01)
 
-    fig, ax = plt.subplots(figsize=(20,4), dpi=300)
+    fig, ax = plt.subplots(figsize=(20, 4), dpi=300)
     ax.plot(sig_sync_times, sig_sync, linewidth=0.1)
     ax.vlines(event * scale, 0, 1, colors='r', linewidth=0.5)
     plt.tight_layout()

@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
 import sys
-import os
-import warnings
-import pandas as pd
 from ebids import sync
 
 bids_dir = sys.argv[1]

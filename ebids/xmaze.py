@@ -1,13 +1,13 @@
 """Module for exporting xmaze data to BIDS."""
 
-import sys
-import os
 import glob
+import os
 import warnings
+import xml.etree.ElementTree as ET
+
 import numpy as np
 import pandas as pd
-import xml.etree.ElementTree as ET
-import json
+
 
 def file_len(fname):
     """Number of lines in a file."""
@@ -22,20 +22,20 @@ def log2events(log_file, events_file):
 
     # initialize different data outputs
     n_max = file_len(log_file)
-    data = pd.DataFrame({'onset':np.zeros(n_max),
-                         'duration':np.zeros(n_max),
-                         'trial_type':np.empty(n_max, dtype=object),
-                         'horiz_dist':np.zeros(n_max),
-                         'diag_dist':np.zeros(n_max),
-                         'pose':np.zeros(n_max),
-                         'x_pos':np.zeros(n_max),
-                         'z_pos':np.zeros(n_max),
-                         'trial':np.zeros(n_max, dtype=int),
-                         'onset_trial':np.zeros(n_max),
-                         'chamber':np.zeros(n_max, dtype=int),
-                         'reward':np.zeros(n_max, dtype=int),
-                         'score':np.zeros(n_max, dtype=int)})
-    
+    data = pd.DataFrame({'onset': np.zeros(n_max),
+                         'duration': np.zeros(n_max),
+                         'trial_type': np.empty(n_max, dtype=object),
+                         'horiz_dist': np.zeros(n_max),
+                         'diag_dist': np.zeros(n_max),
+                         'pose': np.zeros(n_max),
+                         'x_pos': np.zeros(n_max),
+                         'z_pos': np.zeros(n_max),
+                         'trial': np.zeros(n_max, dtype=int),
+                         'onset_trial': np.zeros(n_max),
+                         'chamber': np.zeros(n_max, dtype=int),
+                         'reward': np.zeros(n_max, dtype=int),
+                         'score': np.zeros(n_max, dtype=int)})
+
     # read all data lines
     n = 0
     trial = 0
@@ -48,34 +48,34 @@ def log2events(log_file, events_file):
             if ttype == 'Frame' and len(l) == 8 and l[1] != 'frameNum:':
                 # just a frame logging position in the environment
                 d = l[2:]
-                data.at[n,'onset'] = d[3]
-                data.at[n,'trial_type'] = 'frame'
-                data.at[n,'horiz_dist'] = d[0]
-                data.at[n,'diag_dist'] = d[1]
-                data.at[n,'pose'] = d[2]
-                data.at[n,'x_pos'] = d[4]
-                data.at[n,'z_pos'] = d[5]
-                data.at[n,'trial'] = trial
-                data.at[n,'reward'] = reward
-                data.at[n,'score'] = score
+                data.at[n, 'onset'] = d[3]
+                data.at[n, 'trial_type'] = 'frame'
+                data.at[n, 'horiz_dist'] = d[0]
+                data.at[n, 'diag_dist'] = d[1]
+                data.at[n, 'pose'] = d[2]
+                data.at[n, 'x_pos'] = d[4]
+                data.at[n, 'z_pos'] = d[5]
+                data.at[n, 'trial'] = trial
+                data.at[n, 'reward'] = reward
+                data.at[n, 'score'] = score
 
                 n += 1
             elif ttype == 'Segment:' and len(l) == 10 and l[1] != 'distHori':
                 # a specific event in the experiment
                 d = l[1:]
                 trial = d[7]
-                
-                data.at[n,'onset'] = d[3]
-                data.at[n,'trial_type'] = d[8].lower()
-                data.at[n,'horiz_dist'] = d[0]
-                data.at[n,'diag_dist'] = d[1]
-                data.at[n,'pose'] = d[2]
-                data.at[n,'x_pos'] = d[4]
-                data.at[n,'z_pos'] = d[5]
-                data.at[n,'trial'] = trial
-                data.at[n,'onset_trial'] = d[6]
-                data.at[n,'reward'] = reward
-                data.at[n,'score'] = score
+
+                data.at[n, 'onset'] = d[3]
+                data.at[n, 'trial_type'] = d[8].lower()
+                data.at[n, 'horiz_dist'] = d[0]
+                data.at[n, 'diag_dist'] = d[1]
+                data.at[n, 'pose'] = d[2]
+                data.at[n, 'x_pos'] = d[4]
+                data.at[n, 'z_pos'] = d[5]
+                data.at[n, 'trial'] = trial
+                data.at[n, 'onset_trial'] = d[6]
+                data.at[n, 'reward'] = reward
+                data.at[n, 'score'] = score
 
                 n += 1
             elif ttype == 'Selection' and len(l) == 5 and l[1] != 'trialNum:':
@@ -84,9 +84,9 @@ def log2events(log_file, events_file):
                 d = l[2:]
                 reward = d[1]
                 score = d[2]
-                data.at[n-1,'chamber'] = d[0]
-                data.at[n-1,'reward'] = reward
-                data.at[n-1,'score'] = score
+                data.at[n - 1, 'chamber'] = d[0]
+                data.at[n - 1, 'reward'] = reward
+                data.at[n - 1, 'score'] = score
 
     # remove unused trial space
     data = data[:n]
@@ -97,7 +97,7 @@ def convert_sync(sync_file, out_file):
     """Convert a sync XML file to a BIDS-compatible table."""
 
     # read all sync start events
-    tree = ET.parse(sync_file) 
+    tree = ET.parse(sync_file)
     events = tree.findall('Event')
     send_times = np.zeros(len(events))
     for i, event in enumerate(events):
@@ -107,8 +107,8 @@ def convert_sync(sync_file, out_file):
     # with black, so first change is to white
     send_signals = np.zeros(len(events), dtype=int)
     send_signals[::2] = 1
-    
-    data = pd.DataFrame({'onset':send_times, 'signal':send_signals})
+
+    data = pd.DataFrame({'onset': send_times, 'signal': send_signals})
     data.to_csv(out_file, sep='\t', index=False)
 
 
@@ -119,7 +119,7 @@ def convert_session(raw_dir, bids_dir, sub, ses):
         raise IOError('Raw directory does not exist: {}'.format(raw_dir))
     if not os.path.exists(bids_dir):
         raise IOError('BIDS directory does not exist: {}'.format(bids_dir))
-    
+
     # create the standard session directory
     ses_dir = os.path.join(bids_dir, 'sub-{}'.format(sub),
                            'ses-{}'.format(ses), 'func')
@@ -127,7 +127,7 @@ def convert_session(raw_dir, bids_dir, sub, ses):
         os.makedirs(ses_dir)
 
     n_run = 6
-    for i in range(1, n_run+1):
+    for i in range(1, n_run + 1):
         # find the log file for this run
         files = glob.glob(os.path.join(raw_dir, '*_task_run{}.xml'.format(i)))
         if len(files) > 1:
