@@ -31,6 +31,10 @@ If using python for analysis, you'll also want pybids: `pip install pybids`. If 
 
 See the [wiki](https://github.com/prestonlab/ebids/wiki) for information about converting specific tasks and recording formats. This project is intended to collect scripts for converting multiple tasks, to provide multiple examples and avoid solving the same problems multiple times. However, to keep the project focused, it will only include scripts for converting data, and possibly for loading BIDS data, but not for analysis.
 
+## Syncing task data with recordings
+
+See [alignment](https://github.com/prestonlab/ebids/wiki/Pulse-Alignment) for instructions for aligning TTL pulses to sync up task data with recording data.
+
 ## Reading BIDS data
 
 For BIDS compatibility, in addition to running the relevant data conversion scripts, you also need `dataset_description.json` and `participants.tsv` files in the `bids_dir`.
