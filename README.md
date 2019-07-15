@@ -27,24 +27,9 @@ To work with Neuralynx data in python (used for some preprocessing scripts), dow
 
 If using python for analysis, you'll also want pybids: `pip install pybids`. If using Matlab, try [bids-matlab](https://github.com/bids-standard/bids-matlab).
 
-## Converting behavioral data
+## Converting task and recording data
 
-### XMaze
-
-In the Terminal run:
-```bash
-xmaze-convert raw_dir bids_dir sub ses
-```
-
-where `raw_dir` is the path to the raw behavioral data for one session, `bids_dir` is the root directory of the bids data, sub is a subject code like `DS1902`, and ses is a session code like `01`.
-
-### eCoupling
-
-In Matlab, run:
-```matlab
-ecoupling_convert(raw_dir, bids_dir, sub, ses);
-```
-The inputs are similar to XMaze. The `raw_dir` should contain a file called `header.mat`.
+See the [wiki](https://github.com/prestonlab/ebids/wiki) for information about converting specific tasks and recording formats. This project is intended to collect scripts for converting multiple tasks, to avoid solving the same problems multiple times. However, to keep the project focused, it will only include scripts for converting data, and possibly for loading BIDS data, but not for analysis.
 
 ## Reading BIDS data
 
