@@ -29,7 +29,7 @@ If using python for analysis, you'll also want pybids: `pip install pybids`. If 
 
 ## Converting task and recording data
 
-See the [wiki](https://github.com/prestonlab/ebids/wiki) for information about converting specific tasks and recording formats. This project is intended to collect scripts for converting multiple tasks, to avoid solving the same problems multiple times. However, to keep the project focused, it will only include scripts for converting data, and possibly for loading BIDS data, but not for analysis.
+See the [wiki](https://github.com/prestonlab/ebids/wiki) for information about converting specific tasks and recording formats. This project is intended to collect scripts for converting multiple tasks, to provide multiple examples and avoid solving the same problems multiple times. However, to keep the project focused, it will only include scripts for converting data, and possibly for loading BIDS data, but not for analysis.
 
 ## Reading BIDS data
 
