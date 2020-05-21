@@ -135,7 +135,8 @@ def align_run_reg(send_file, recv_file, sync_file,
     print(f'Stop:   {finish - sync_start:.0f} s')
 
     # write to a sync file
-    d = {'offset': x[0], 'slope': x[1], 'scale': 1 / recv_scale}
+    d = {'offset': x[0], 'slope': x[1], 'scale': 1 / recv_scale,
+         'mse': mse, 'start': start - sync_start, 'finish': finish - sync_start}
     with open(sync_file, 'w') as f:
         json.dump(d, f)
 
