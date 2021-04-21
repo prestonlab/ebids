@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import neo
 import neo.rawio.neuralynxrawio as nlxio
 from bids import BIDSLayout
-import sync
+from ebids import sync
 
 
 def timediff(t1, t2):
